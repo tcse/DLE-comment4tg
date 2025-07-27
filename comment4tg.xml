@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<dleplugin>
+	<name>comment4tg</name>
+	<description>Комментарии в Telegram для сайта.</description>
+	<icon>engine/skins/images/comment4tg.png</icon>
+	<version>0.0.2</version>
+	<dleversion>13</dleversion>
+	<versioncompare>greater</versioncompare>
+	<upgradeurl></upgradeurl>
+	<filedelete>0</filedelete>
+	<needplugin></needplugin>
+	<mnotice>1</mnotice>
+	<mysqlinstall><![CDATA[-- Создание таблицы для хранения связи новостей и сообщений в Telegram
+        CREATE TABLE IF NOT EXISTS `{prefix}_comments_telegram` (
+          `news_id` INT UNSIGNED NOT NULL PRIMARY KEY,
+          `telegram_message_id` INT UNSIGNED NOT NULL,
+          `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+        -- Добавление пункта в админку DLE
+        INSERT INTO `{prefix}_admin_sections` 
+        (`name`, `title`, `descr`, `icon`, `allow_groups`) 
+        VALUES (
+          'comment4tg', 
+          'Плагин comment4tg', 
+          'Комментарии сайта в Telegram канале', 
+          'comment4tg.png', 
+          '1'
+        );]]></mysqlinstall>
+	<mysqlupgrade><![CDATA[]]></mysqlupgrade>
+	<mysqlenable><![CDATA[]]></mysqlenable>
+	<mysqldisable><![CDATA[]]></mysqldisable>
+	<mysqldelete><![CDATA[DELETE FROM `{prefix}_admin_sections` WHERE name='comment4tg']]></mysqldelete>
+	<phpinstall><![CDATA[]]></phpinstall>
+	<phpupgrade><![CDATA[]]></phpupgrade>
+	<phpenable><![CDATA[]]></phpenable>
+	<phpdisable><![CDATA[]]></phpdisable>
+	<phpdelete><![CDATA[]]></phpdelete>
+	<notice><![CDATA[Плагин интеграции комментариев сайта на CMS DataLife Engine
+с мессенджером Telegram, позволяющий:
+
+ ✅ Отправлять публикации сайта в Telegram-канал по клику на кнопку.
+ ✅ Автоматически создавать тему обсуждения в Telegram.
+ ✅ Связывать комментарии в Telegram с конкретной новостью на сайте.
+✅ Показывать ссылку на комментарии в Telegram, если они уже созданы.
+
+УСТАНОВКА:
+1. в настройках плагина /admin.php?mod=comment4tg укажите токен бота и имя канала
+2. в шаблон полной новости fullstory.tpl в удобном месте подключите файл с кнопкой комментариев  
+{include file="custom/comments/comment4tg.tpl"}]]></notice>
+</dleplugin>
