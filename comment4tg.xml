@@ -3,7 +3,7 @@
 	<name>comment4tg</name>
 	<description>Комментарии в Telegram для сайта.</description>
 	<icon>engine/skins/images/comment4tg.png</icon>
-	<version>0.0.2</version>
+	<version>0.0.3</version>
 	<dleversion>13</dleversion>
 	<versioncompare>greater</versioncompare>
 	<upgradeurl></upgradeurl>
@@ -48,4 +48,20 @@
 1. в настройках плагина /admin.php?mod=comment4tg укажите токен бота и имя канала
 2. в шаблон полной новости fullstory.tpl в удобном месте подключите файл с кнопкой комментариев  
 {include file="custom/comments/comment4tg.tpl"}]]></notice>
+	<file name="engine/modules/show.full.php">
+		<operation action="after">
+			<searchcode><![CDATA[$row['title'] = stripslashes( $row['title'] );		
+		$metatags['title'] = $row['title'];]]></searchcode>
+			<replacecode><![CDATA[// --- Начало: Добавление тега {comment4tg-channel} без @ ---
+if (file_exists(ENGINE_DIR . '/data/comment4tg.php')) {
+    include_once ENGINE_DIR . '/data/comment4tg.php';
+    if (isset($comment4tgConfig['comment4tg_CHANNEL'])) {
+        $channel = ltrim($comment4tgConfig['comment4tg_CHANNEL'], '@');
+        $tpl->set('{comment4tg-channel}', $channel);
+    }
+}
+// --- Конец добавления ---]]></replacecode>
+			<enabled>1</enabled>
+		</operation>
+	</file>
 </dleplugin>

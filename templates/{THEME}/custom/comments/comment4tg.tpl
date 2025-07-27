@@ -23,9 +23,9 @@
       <div class="bg-white p-4 rounded-3 mb-4 w-100" style="max-width: 500px;">
         <h5 class="fw-semibold mb-3">💡 Хотите обсудить материал?</h5>
         <p class="mb-3">Присоединяйтесь к нашему Telegram-каналу:</p>
-        <a href="https://t.me/tcsecms/" class="d-inline-block mb-3 text-decoration-none">
+        <a href="https://t.me/{comment4tg-channel}" class="d-inline-block mb-3 text-decoration-none">
           <span class="badge bg-primary px-3 py-2 rounded-pill">
-            <i class="bi bi-telegram me-2"></i>https://t.me/tcsecms/
+            <i class="bi bi-telegram me-2"></i>https://t.me/{comment4tg-channel}
           </span>
         </a>
         <p class="small text-muted mb-0">Нажмите кнопку ниже — и вы сразу попадёте в чат с комментариями</p>
@@ -63,6 +63,7 @@
   
   .btn-telegram {
     background-color: #0088cc;
+    padding: 10px 20px;
     color: white;
     border: none;
     transition: all 0.3s ease;
@@ -92,7 +93,7 @@ document.getElementById('comment4tg-btn').addEventListener('click', function () 
     .then(response => response.json())
     .then(data => {
         if (data.message_id) {
-            const tgLink = `https://t.me/tcsecms/${data.message_id}?comment=1`;
+            const tgLink = `https://t.me/{comment4tg-channel}/${data.message_id}?comment=1`;
             document.getElementById('tg-comment-button').innerHTML =
                 `<a class="btn-telegram" href="${tgLink}" target="_blank">Комментарии в Telegram</a>`;
         } else {
