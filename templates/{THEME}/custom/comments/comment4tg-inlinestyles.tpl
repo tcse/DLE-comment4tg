@@ -46,12 +46,36 @@
   </div>
 </div>
 
+<style>
+  /* Анимация спиннера */
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+</style>
+
 <script>
 document.getElementById('comment4tg-btn').addEventListener('click', function () {
-    const title = this.getAttribute('data-comment4tg-title');
-    const link = this.getAttribute('data-comment4tg-link');
+    const btn = this;
+    const title = btn.getAttribute('data-comment4tg-title');
+    const link = btn.getAttribute('data-comment4tg-link');
     const newsId = {news-id}; // Переменная DLE
-
+    
+    // Проверяем, не заблокирована ли уже кнопка
+    if (btn.disabled) return;
+    
+    // Сохраняем исходный текст и стили
+    const originalText = btn.innerHTML;
+    const originalStyle = btn.style.cssText;
+    
+    // Блокируем кнопку и меняем внешний вид
+    btn.disabled = true;
+    btn.style.opacity = '0.7';
+    btn.style.cursor = 'wait';
+    
+    // Добавляем спиннер и меняем текст
+    btn.innerHTML = '<span style="display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle;"></span> Отправка...';
+    
+    // Отправляем запрос
     fetch('/engine/ajax/telegram_comment.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -62,10 +86,22 @@ document.getElementById('comment4tg-btn').addEventListener('click', function () 
         if (data.message_id) {
             const tgLink = `https://t.me/{comment4tg-channel}/${data.message_id}?comment=1`;
             document.getElementById('tg-comment-button').innerHTML =
-                `<a style="background-color: #0088cc; padding: 10px 20px; color: white; border: none; transition: all 0.3s ease; display: inline-block; text-decoration: none; border-radius: 0.25rem;" href="${tgLink}" target="_blank">Комментарии в Telegram</a>`;
+                `<a style="background-color: #0088cc; padding: 10px 20px; color: white; border: none; transition: all 0.3s ease; display: inline-block; text-decoration: none; border-radius: 0.25rem;" href="${tgLink}" target="_blank">✅ Комментарии в Telegram</a>`;
         } else {
+            // Восстанавливаем кнопку при ошибке
+            btn.disabled = false;
+            btn.style.cssText = originalStyle;
+            btn.innerHTML = originalText;
             alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
         }
+    })
+    .catch(error => {
+        // Восстанавливаем кнопку при сетевой ошибке
+        btn.disabled = false;
+        btn.style.cssText = originalStyle;
+        btn.innerHTML = originalText;
+        alert('Ошибка соединения. Пожалуйста, попробуйте позже.');
+        console.error('Ошибка:', error);
     });
 });
 </script>
