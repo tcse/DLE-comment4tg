@@ -78,13 +78,55 @@
   .btn-telegram:active {
     transform: translateY(0);
   }
+  
+  /* Стили для индикации загрузки */
+  #comment4tg-btn.loading {
+    opacity: 0.7;
+    cursor: wait;
+    pointer-events: none;
+  }
+  
+  .spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  #comment4tg-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
 </style>
+
 <script>
 document.getElementById('comment4tg-btn').addEventListener('click', function () {
-    const title = this.getAttribute('data-comment4tg-title');
-    const link = this.getAttribute('data-comment4tg-link');
+    const btn = this;
+    const title = btn.getAttribute('data-comment4tg-title');
+    const link = btn.getAttribute('data-comment4tg-link');
     const newsId = {news-id}; // Переменная DLE
-
+    
+    // Проверяем, не заблокирована ли уже кнопка (чтобы избежать повторных кликов)
+    if (btn.disabled) return;
+    
+    // Сохраняем исходный текст кнопки
+    const originalText = btn.innerHTML;
+    
+    // Блокируем кнопку и показываем индикацию загрузки
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.innerHTML = '<span class="spinner"></span> Отправка...';
+    
+    // Отправляем запрос
     fetch('/engine/ajax/telegram_comment.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -94,14 +136,28 @@ document.getElementById('comment4tg-btn').addEventListener('click', function () 
     .then(data => {
         if (data.message_id) {
             const tgLink = `https://t.me/{comment4tg-channel}/${data.message_id}?comment=1`;
+            // Успех: заменяем кнопку на ссылку
             document.getElementById('tg-comment-button').innerHTML =
-                `<a class="btn-telegram" href="${tgLink}" target="_blank">Комментарии в Telegram</a>`;
+                `<a class="btn-telegram" href="${tgLink}" target="_blank">✅ Комментарии в Telegram</a>`;
         } else {
+            // Ошибка: восстанавливаем кнопку
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            btn.innerHTML = originalText;
             alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
         }
+    })
+    .catch(error => {
+        // Сетевая ошибка: восстанавливаем кнопку
+        btn.disabled = false;
+        btn.classList.remove('loading');
+        btn.innerHTML = originalText;
+        alert('Ошибка соединения. Пожалуйста, попробуйте позже.');
+        console.error('Ошибка:', error);
     });
 });
 </script>
+
 <!-- JavaScript для рандомной фразы -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
