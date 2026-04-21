@@ -1,4 +1,4 @@
-<div class="container my-5">
+<div class="my-5">
   <div class="comment-block bg-light p-4 p-md-5 rounded-4 shadow-sm">
     <div class="d-flex flex-column align-items-center text-center">
       <!-- Иконка -->
@@ -32,13 +32,37 @@
       </div>
       
       <!-- Кнопка или ссылка -->
-        <div id="tg-comment-button">
-            <button type="button" class="btn btn-primary" id="comment4tg-btn"
-                data-comment4tg-title="{title}"
-                data-comment4tg-link="{full-link}">
-                Обсудить в Telegram
-            </button>
+      <div id="tg-comment-button">
+        <button type="button" class="btn btn-primary" id="comment4tg-btn"
+            data-comment4tg-title="{title}"
+            data-comment4tg-link="{full-link}"
+            data-news-id="{news-id}">
+            Обсудить в Telegram
+        </button>
+      </div>
+      
+      <!-- Блок для отображения статистики -->
+      <div id="tg-stats" style="margin-top: 15px; font-size: 0.9em; color: #6c757d; text-align: center; min-height: 30px;">
+        <span id="tg-comments-count"></span>
+        <button id="tg-refresh-stats" style="background: none; border: none; color: #0088cc; cursor: pointer; margin-left: 8px; font-size: 0.85em; display: none;" title="Обновить статистику">
+          🔄
+        </button>
+      </div>
+      
+      <!-- НОВЫЙ БЛОК: Последние комментарии (как в Disqus) -->
+      <div id="tg-last-comments" style="margin-top: 25px; width: 100%; max-width: 500px; text-align: left; display: none;">
+        <div style="font-size: 0.85em; font-weight: 600; color: #495057; border-bottom: 2px solid #0088cc; padding-bottom: 8px; margin-bottom: 15px;">
+          📝 Последние комментарии
         </div>
+        <div id="tg-comments-list" style="font-size: 0.85em;">
+          <div style="text-align: center; color: #999; padding: 20px;">Загрузка комментариев...</div>
+        </div>
+        <div style="text-align: center; margin-top: 12px;">
+          <a href="https://t.me/{comment4tg-channel}" target="_blank" style="font-size: 0.75em; color: #0088cc; text-decoration: none;">
+            Все комментарии в Telegram →
+          </a>
+        </div>
+      </div>
       
       <!-- Подпись с рандомным текстом -->
       <p class="small text-muted mt-3 mb-0" id="random-phrase"></p>
@@ -46,7 +70,6 @@
   </div>
 </div>
 
-<!-- CSS для кнопки Telegram -->
 <style>
   .comment-block {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
@@ -67,19 +90,22 @@
     color: white;
     border: none;
     transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+    border-radius: 0.25rem;
   }
   
   .btn-telegram:hover {
     background-color: #0077b3;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 136, 204, 0.2);
+    color: white;
   }
   
   .btn-telegram:active {
     transform: translateY(0);
   }
   
-  /* Стили для индикации загрузки */
   #comment4tg-btn.loading {
     opacity: 0.7;
     cursor: wait;
@@ -106,59 +132,289 @@
     opacity: 0.7;
     cursor: not-allowed;
   }
+  
+  #tg-refresh-stats:hover {
+    opacity: 0.7;
+  }
+  
+  #tg-refresh-stats:disabled {
+    opacity: 0.5;
+    cursor: wait;
+  }
+  
+  /* Стили для комментариев */
+  .tg-comment-item {
+    margin-bottom: 15px;
+    padding: 10px 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: background 0.2s ease;
+  }
+  
+  .tg-comment-item:hover {
+    background: #f1f3f5;
+  }
+  
+  .tg-comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  
+  .tg-comment-avatar {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #0088cc, #005f8a);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  
+  .tg-comment-username {
+    font-weight: 600;
+    font-size: 0.85em;
+    color: #333;
+  }
+  
+  .tg-comment-date {
+    font-size: 0.7em;
+    color: #999;
+    margin-left: auto;
+  }
+  
+  .tg-comment-text {
+    font-size: 0.85em;
+    line-height: 1.4;
+    color: #495057;
+    word-break: break-word;
+  }
+  
+  .tg-comment-text a {
+    color: #0088cc;
+    text-decoration: none;
+  }
+  
+  .tg-comment-text a:hover {
+    text-decoration: underline;
+  }
+  
+  .tg-loading {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+  }
 </style>
 
 <script>
-document.getElementById('comment4tg-btn').addEventListener('click', function () {
-    const btn = this;
-    const title = btn.getAttribute('data-comment4tg-title');
-    const link = btn.getAttribute('data-comment4tg-link');
-    const newsId = {news-id}; // Переменная DLE
+// Функция для загрузки последних комментариев
+function loadLastComments(newsId, limit = 3) {
+    const container = document.getElementById('tg-comments-list');
+    const parentBlock = document.getElementById('tg-last-comments');
     
-    // Проверяем, не заблокирована ли уже кнопка (чтобы избежать повторных кликов)
-    if (btn.disabled) return;
+    if (!container) return;
     
-    // Сохраняем исходный текст кнопки
-    const originalText = btn.innerHTML;
+    container.innerHTML = '<div class="tg-loading">⏳ Загрузка комментариев...</div>';
     
-    // Блокируем кнопку и показываем индикацию загрузки
-    btn.disabled = true;
-    btn.classList.add('loading');
-    btn.innerHTML = '<span class="spinner"></span> Отправка...';
+    fetch('/plugins/tcse/comment4tg/ajax/get_comments.php?news_id=' + newsId + '&limit=' + limit)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.comments && data.comments.length > 0) {
+                let html = '';
+                data.comments.forEach(comment => {
+                    const avatar = comment.username ? comment.username.charAt(0).toUpperCase() : 'A';
+                    const text = comment.text.substring(0, 200) + (comment.text.length > 200 ? '...' : '');
+                    html += `
+                        <div class="tg-comment-item">
+                            <div class="tg-comment-header">
+                                <div class="tg-comment-avatar">${escapeHtml(avatar)}</div>
+                                <div class="tg-comment-username">${escapeHtml(comment.username || 'anonymous')}</div>
+                                <div class="tg-comment-date">${comment.date_formatted || ''}</div>
+                            </div>
+                            <div class="tg-comment-text">${formatTelegramText(escapeHtml(text))}</div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+                if (parentBlock) parentBlock.style.display = 'block';
+            } else {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">💬 Пока нет комментариев. Будьте первым!</div>';
+                if (parentBlock) parentBlock.style.display = 'block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading comments:', error);
+            container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">⚠️ Не удалось загрузить комментарии</div>';
+        });
+}
+
+// Функция для загрузки статистики
+function loadTelegramStats(newsId) {
+    const countSpan = document.getElementById('tg-comments-count');
+    const refreshBtn = document.getElementById('tg-refresh-stats');
     
-    // Отправляем запрос
-    fetch('/engine/ajax/telegram_comment.php', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: `news_id=${newsId}&title=${encodeURIComponent(title)}&link=${encodeURIComponent(link)}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.message_id) {
-            const tgLink = `https://t.me/{comment4tg-channel}/${data.message_id}?comment=1`;
-            // Успех: заменяем кнопку на ссылку
-            document.getElementById('tg-comment-button').innerHTML =
-                `<a class="btn-telegram" href="${tgLink}" target="_blank">✅ Комментарии в Telegram</a>`;
-        } else {
-            // Ошибка: восстанавливаем кнопку
-            btn.disabled = false;
-            btn.classList.remove('loading');
-            btn.innerHTML = originalText;
-            alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+    if (!countSpan) return;
+    
+    countSpan.innerHTML = '⏳ Загрузка...';
+    
+    fetch('/plugins/tcse/comment4tg/ajax/stats.php?news_id=' + newsId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const count = data.comments_count;
+                if (count === 0) {
+                    countSpan.innerHTML = '💬 Пока нет комментариев в Telegram';
+                } else if (count === 1) {
+                    countSpan.innerHTML = '💬 1 комментарий в Telegram';
+                } else if (count <= 4) {
+                    countSpan.innerHTML = '💬 ' + count + ' комментария в Telegram';
+                } else {
+                    countSpan.innerHTML = '💬 ' + count + ' комментариев в Telegram';
+                }
+                if (refreshBtn) refreshBtn.style.display = 'inline-block';
+                
+                // Если есть комментарии, загружаем их
+                if (count > 0) {
+                    loadLastComments(newsId);
+                }
+            } else {
+                countSpan.innerHTML = '💬 Статистика недоступна';
+                if (refreshBtn) refreshBtn.style.display = 'inline-block';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading stats:', error);
+            countSpan.innerHTML = '💬 Не удалось загрузить статистику';
+            if (refreshBtn) refreshBtn.style.display = 'inline-block';
+        });
+}
+
+// Функция для синхронизации счётчика
+function syncTelegramCount(newsId) {
+    const refreshBtn = document.getElementById('tg-refresh-stats');
+    const originalText = refreshBtn.innerHTML;
+    
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '⏳';
+    
+    fetch('/plugins/tcse/comment4tg/ajax/sync_count.php?news_id=' + newsId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const count = data.comments_count;
+                const countSpan = document.getElementById('tg-comments-count');
+                if (count === 0) {
+                    countSpan.innerHTML = '💬 Пока нет комментариев в Telegram';
+                } else if (count === 1) {
+                    countSpan.innerHTML = '💬 1 комментарий в Telegram';
+                } else if (count <= 4) {
+                    countSpan.innerHTML = '💬 ' + count + ' комментария в Telegram';
+                } else {
+                    countSpan.innerHTML = '💬 ' + count + ' комментариев в Telegram';
+                }
+                // Обновляем список комментариев
+                if (count > 0) {
+                    loadLastComments(newsId);
+                }
+            } else {
+                alert('Не удалось обновить статистику: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error syncing count:', error);
+            alert('Ошибка соединения при обновлении статистики');
+        })
+        .finally(() => {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '🔄';
+        });
+}
+
+// Вспомогательные функции
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatTelegramText(text) {
+    if (!text) return '';
+    // Преобразуем ссылки
+    return text.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="nofollow">$1</a>');
+}
+
+// Основной код при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('comment4tg-btn');
+    const newsId = btn ? btn.getAttribute('data-news-id') : null;
+    
+    if (newsId && newsId !== '0') {
+        loadTelegramStats(newsId);
+        
+        const refreshBtn = document.getElementById('tg-refresh-stats');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                syncTelegramCount(newsId);
+            });
         }
-    })
-    .catch(error => {
-        // Сетевая ошибка: восстанавливаем кнопку
-        btn.disabled = false;
-        btn.classList.remove('loading');
-        btn.innerHTML = originalText;
-        alert('Ошибка соединения. Пожалуйста, попробуйте позже.');
-        console.error('Ошибка:', error);
-    });
+    }
+    
+    // Обработчик основной кнопки
+    if (btn) {
+        btn.addEventListener('click', function () {
+            const title = btn.getAttribute('data-comment4tg-title');
+            const link = btn.getAttribute('data-comment4tg-link');
+            const currentNewsId = btn.getAttribute('data-news-id');
+            
+            if (btn.disabled) return;
+            
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btn.innerHTML = '<span class="spinner"></span> Отправка...';
+            
+            fetch('/plugins/tcse/comment4tg/telegram_comment.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `news_id=${currentNewsId}&title=${encodeURIComponent(title)}&link=${encodeURIComponent(link)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message_id) {
+                    const tgLink = `https://t.me/{comment4tg-channel}/${data.message_id}?comment=1`;
+                    document.getElementById('tg-comment-button').innerHTML =
+                        `<a class="btn-telegram" href="${tgLink}" target="_blank">✅ Комментарии в Telegram</a>`;
+                    const statsBlock = document.getElementById('tg-stats');
+                    if (statsBlock) statsBlock.style.display = 'none';
+                } else {
+                    btn.disabled = false;
+                    btn.classList.remove('loading');
+                    btn.innerHTML = originalText;
+                    alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                btn.innerHTML = originalText;
+                alert('Ошибка соединения. Пожалуйста, попробуйте позже.');
+                console.error('Ошибка:', error);
+            });
+        });
+    }
 });
 </script>
 
-<!-- JavaScript для рандомной фразы -->
+<!-- Рандомные фразы -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const phrases = [
@@ -171,31 +427,13 @@ document.getElementById('comment4tg-btn').addEventListener('click', function () 
       "💬 Чат в Telegram — как комментарии, но с энд-ту-энд шифрованием",
       "🌍 В этом году комментарии мигрировали на юг — в Telegram",
       "📜 Мы выполнили 152-ФЗ так, что даже комментарии удивились",
-      "🤖 Наши модераторы теперь алгоритмы (но мы их тоже отключили)",
-      "🚫 Комментарии временно недоступны... навсегда",
-      "💻 Цифровая экономика: сначала исчезли наличные, теперь — комментарии",
-      "🛡️ Мы так защитили ваши данные, что даже вы к ним не достучитесь",
-      "📅 2024: год, когда комментарии стали элитным клубом Telegram",
-      "🔮 Мы предсказали будущее — оно без комментариев на сайте",
-      "🇷🇺 Патриотично — обсуждать в Telegram (по версии РКН)",
-      "💼 Новый бизнес-модель: сначала отключаем комментарии, потом продаём VPN",
-      "📉 Курс рубля упал, а требования к комментариям — выросли",
-      "🏛️ Госдума рекомендует: дышите глубже и комментируйте в Telegram",
-      "🛑 Стоп-лист: вода, огонь, комментарии на сайтах",
-      "📜 Конституция гарантирует право на... ой, нет, это было в прошлой редакции",
-      "⚖️ Весы Фемиды: с одной стороны — ФЗ-152, с другой — ваше мнение",
-      "🕵️‍♂️ Ваши комментарии теперь охраняются так же, как гостайна",
-      "🌐 Интернет сузился до размеров мессенджера (но это не точно)",
-      "🗳️ Выбор есть: молчать в комментариях или говорить в Telegram",
-      "⚡ Быстрее, выше, сильнее... и без комментариев на сайте!",
-      "🧩 Потерянный кусочек интернета найден в Telegram",
-      "🎭 Театр комментариев закрылся на цифровой ремонт",
-      "📡 Сигнал комментариев теперь ловят только в мессенджерах",
-      "🔄 Обновление системы: комментарии заменены на эмодзи в Telegram"
+      "🤖 Наши модераторы теперь алгоритмы (но мы их тоже отключили)"
     ];
     
     const randomPhraseElement = document.getElementById('random-phrase');
-    const randomIndex = Math.floor(Math.random() * phrases.length);
-    randomPhraseElement.textContent = phrases[randomIndex];
+    if (randomPhraseElement) {
+      const randomIndex = Math.floor(Math.random() * phrases.length);
+      randomPhraseElement.textContent = phrases[randomIndex];
+    }
   });
 </script>
